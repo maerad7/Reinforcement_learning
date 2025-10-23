@@ -81,22 +81,22 @@ class SarsaAgent:
             return
 
         # 3) t-1 시점 전이(업데이트 대상)와 t 시점 전이(부트스트랩용 다음 상태/행동) 분리
-        prev_state, prev_action, prev_reward, prev_done = self.memory[0]   # 업데이트할 (S, A, R, done)
+        state, action, reward, done = self.memory[0]   # 업데이트할 (S, A, R, done)
         next_state, next_action, _, _ = self.memory[1]                     # 부트스트랩용 (S', A')
 
         # 4) SARSA의 다음 상태-행동 가치 Q(S', A') 계산
         #    터미널이면 부트스트랩을 끊어 0으로 둔다.
-        next_q = 0 if prev_done else self.Q[(next_state, next_action)]
+        next_q = 0 if done else self.Q[(next_state, next_action)]
 
         # 5) TD 타깃: R + γ Q(S', A')
-        target = prev_reward + self.gamma * next_q
+        target = reward + self.gamma * next_q
 
         # 6) TD 오차를 이용한 Q 업데이트: Q ← Q + α (target - Q)
-        self.Q[(prev_state, prev_action)] += (target - self.Q[(prev_state, prev_action)]) * self.alpha
+        self.Q[(state, action)] += (target - self.Q[(state, action)]) * self.alpha
 
         # 7) 정책 개선(ε-탐욕화): 최신 Q를 반영해 해당 상태의 행동분포를 갱신
         #    → 온-폴리시이므로, 학습과 동일한 정책으로 행동을 계속 샘플링
-        self.pi[prev_state] = greedy_probs(self.Q, prev_state, self.epsilon)
+        self.pi[state] = greedy_probs(self.Q, state, self.epsilon)
 
 
 # --------- 학습 환경 및 루프 ---------
