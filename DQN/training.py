@@ -203,7 +203,7 @@ for i_episode in range(num_episodes):
     for t in count():  # 무한 루프 → 내부에서 done이면 break
         # ε-greedy로 행동 선택
         action = select_action(state)
-
+        # env.render()
         # 환경 한 스텝 전진
         obs, reward, terminated, truncated, _ = env.step(action.item())
         reward = torch.tensor([reward], device=device)
@@ -235,7 +235,37 @@ for i_episode in range(num_episodes):
             plot_durations()
             break
 
+torch.save(policy_net.state_dict(), "dqn_cartpole2.pth")
+print("✅ 모델 저장 완료: dqn_cartpole.pth")
+
+# 네트워크 초기화 (동일한 구조여야 함)
+loaded_net = DQN(n_observations, n_actions).to(device)
+loaded_net.load_state_dict(torch.load("dqn_cartpole2.pth"))
+loaded_net.eval()   # 평가 모드 (Dropout/BatchNorm 비활성화)
+print("✅ 모델 로드 완료")
+
+
 print('Complete')
 plot_durations(show_result=True)
+# 렌더링 환경 생성
+env = gym.make("CartPole-v1", render_mode="human")
+
+for i in range(5):  # 5 에피소드 실행
+    obs, info = env.reset()
+    state = torch.tensor(obs, dtype=torch.float32, device=device).unsqueeze(0)
+    done = False
+    while not done:
+        env.render()
+        with torch.no_grad():
+            action = loaded_net(state).max(1).indices.view(1, 1)
+        obs, reward, terminated, truncated, _ = env.step(action.item())
+        done = terminated or truncated
+        if not done:
+            state = torch.tensor(obs, dtype=torch.float32, device=device).unsqueeze(0)
+
+env.close()
+
+
+
 plt.ioff()
 plt.show()
