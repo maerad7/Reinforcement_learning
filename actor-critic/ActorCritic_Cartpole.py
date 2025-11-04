@@ -48,7 +48,7 @@ class CriticV(nn.Module):
 # ----- Agent -----
 class A2CAgent:
     def __init__(self, env_id="CartPole-v1", gamma=0.99, hidden_size=32,
-                 actor_lr=7e-3, critic_lr=7e-3, entropy_coef=0.01,
+                 actor_lr=1e-3, critic_lr=1e-3, entropy_coef=0.005,
                  device=None, seed=2000):
         # 디바이스 자동 선택 (CUDA 있으면 GPU, 없으면 CPU)
         if device is None:
@@ -114,16 +114,16 @@ class A2CAgent:
         self.a_opt.step(); self.c_opt.step()
         return actor_loss.item(), critic_loss.item()
 
-    def save(self, path="checkpoints"):
+    def save(self, episode, path="checkpoints"):
         # 모델 저장
         Path(path).mkdir(exist_ok=True)
-        torch.save(self.actor.state_dict(), os.path.join(path, "actor.pth"))
-        torch.save(self.critic.state_dict(), os.path.join(path, "critic.pth"))
+        torch.save(self.actor.state_dict(), os.path.join(path, f"actor_{episode}.pth"))
+        torch.save(self.critic.state_dict(), os.path.join(path, f"critic_{episode}.pth"))
 
-    def load(self, path="checkpoints_best"):
+    def load(self,episode, path="checkpoints_best"):
         # 모델 로드
-        self.actor.load_state_dict(torch.load(os.path.join(path, "actor.pth"), map_location=self.device))
-        self.critic.load_state_dict(torch.load(os.path.join(path, "critic.pth"), map_location=self.device))
+        self.actor.load_state_dict(torch.load(os.path.join(path, f"actor_{episode}.pth"), map_location=self.device))
+        self.critic.load_state_dict(torch.load(os.path.join(path, f"critic_{episode}.pth"), map_location=self.device))
         print("[LOAD] 모델 가중치 불러옴")
 
     def train(self, max_episodes=300):
@@ -146,18 +146,18 @@ class A2CAgent:
             # 최고 보상 갱신 → 모델 저장
             if ep_reward > best_reward:
                 best_reward = ep_reward
-                self.save(path="checkpoints_best")
+                self.save(ep, path="checkpoints_best")
                 print(f"[BEST] Episode {ep + 1}, New Best Reward: {best_reward}")
 
             if (ep+1) % 10 == 0:
                 print(f"Episode {ep+1}, Avg Reward: {np.mean(rewards[-10:]):.2f}")
-        self.save()
+        # self.save()
         print("[SAVE] 모델 저장 완료")
         print(f"[INFO] Best reward = {best_reward}, model saved in checkpoints_best/")
 
     def record_video(self, episodes=3, video_dir="videos"):
         # 학습된 모델로 비디오 녹화
-        self.load()
+        self.load(268)
         eval_env = gym.make(self.env_id, render_mode="rgb_array")
         eval_env = RecordVideo(eval_env, video_folder=video_dir, name_prefix="A2C")
         for ep in range(episodes):
@@ -178,5 +178,5 @@ class A2CAgent:
 
 # ===== 실행 예시 =====
 agent = A2CAgent()           # 에이전트 생성
-agent.train(max_episodes=5000) # 학습
-agent.record_video(episodes=2) # 학습된 모델로 비디오 저장
+agent.train(max_episodes=500) # 학습
+# agent.record_video(episodes=2) # 학습된 모델로 비디오 저장
